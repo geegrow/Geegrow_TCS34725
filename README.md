@@ -1,7 +1,10 @@
 # GeeGrow_TCS34725
 
 This library is specially written to provide communication with TCS34725 Color 
-Sensor. The sensor can be purchased in our store https://geegrow.ru .
+Sensor. The main feature is implementation of calibration to reflect correct 
+color values scaled to 255-format. Also there is an opportunity to get raw data 
+from device registers without any correction.
+The sensor can be purchased in our store https://geegrow.ru .
 
 For more information you can visit https://github.com/geegrow/GeeGrow_TCS34725
 
