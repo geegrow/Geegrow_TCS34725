@@ -57,6 +57,7 @@ class Geegrow_TCS34725 {
         void setLimitsIRQ(int16_t high, int16_t low);
         void calibrate();
         void calibrateManual(RGBC_value_t* array, uint8_t size);
+        RGBC_value_t* getCalibrationValues(uint8_t &size);
 
     private:
         void setIntegrationTime(uint8_t integrationTime);

@@ -221,6 +221,18 @@ void Geegrow_TCS34725::calibrateManual(RGBC_value_t* array, uint8_t size) {
 
 /******************************************************************************/
 /*!
+    @brief    Get values, recorded during calibration
+    @param    size    Reference to size of array of calibration values
+    @return   Pointer to array of calibration values
+ */
+/******************************************************************************/
+RGBC_value_t* Geegrow_TCS34725::getCalibrationValues(uint8_t &size) {
+    size = this->calibTableSize;
+    return this->calibValues;
+}
+
+/******************************************************************************/
+/*!
     @brief    Sets value of integration time
     @param    time    Value of integration time
  */
@@ -275,6 +287,7 @@ void Geegrow_TCS34725::I2C_write_8(uint8_t reg, uint8_t value) {
 /*!
     @brief    Read 8 bit value from device register
     @param    reg     Register to be read
+    @return   8-bit value of register
  */
 /******************************************************************************/
 uint8_t Geegrow_TCS34725::I2C_read_8(uint8_t reg) {
@@ -289,6 +302,7 @@ uint8_t Geegrow_TCS34725::I2C_read_8(uint8_t reg) {
 /*!
     @brief    Read 16 bit value from device register
     @param    reg     Register to be read
+    @return   16-bit value of register
  */
 /******************************************************************************/
 uint16_t Geegrow_TCS34725::I2C_read_16(uint8_t reg) {
