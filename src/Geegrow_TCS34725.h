@@ -26,6 +26,16 @@
 /******************************************************************************/
 #define TCS34725_I2C_ADDRESS   0x29
 
+#define CALIBRATION_TIME       5000
+#define MAX_CALIB_TABLE_SIZE   10
+
+struct RGBC_value_t {
+    uint16_t red;
+    uint16_t green;
+    uint16_t blue;
+    uint16_t clear;
+};
+
 /******************************************************************************/
 /*!
     @brief    Class that stores state and functions for interacting with TCS34725
@@ -46,7 +56,8 @@ class Geegrow_TCS34725 {
         void disableIRQ();
         void setLimitsIRQ(int16_t high, int16_t low);
         void calibrate();
-        
+        void calibrateManual(RGBC_value_t* array, uint8_t size);
+
     private:
         void setIntegrationTime(uint8_t integrationTime);
         void setGain(uint8_t gain);
@@ -57,8 +68,15 @@ class Geegrow_TCS34725 {
         uint16_t currentIntegrationTime = 0;
         uint8_t currentGain = 0;
         uint8_t i2c_addr = 0;
-        int16_t calibrationAvg = 0;
-        int16_t calibrationDiff[3];
+
+        int8_t calibTableSize = 0;
+        float calibCoef[MAX_CALIB_TABLE_SIZE][4];
+        RGBC_value_t* calibValues;
+        uint8_t calibMaxValueIndex = 0;
+};
+
+namespace Tools {
+    void bubble_sort(RGBC_value_t *array, uint8_t array_size);
 };
 
 #endif /* GEEGROW_TCS34725_H */

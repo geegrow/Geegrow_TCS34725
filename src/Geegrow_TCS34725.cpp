@@ -86,13 +86,23 @@ void Geegrow_TCS34725::getRGB_255(int16_t &red, int16_t &green, int16_t &blue) {
         return;
     }
 
-    temp_red   -= this->calibrationDiff[0];
-    temp_green -= this->calibrationDiff[1];
-    temp_blue  -= this->calibrationDiff[2];
+    float clearDiv = this->calibValues[0].clear / (float)temp_clear;
+    uint8_t calibIdx = 0;
+    for (uint8_t i = this->calibTableSize - 1; i > 0; i--) {
+        if (clearDiv > this->calibCoef[i][3]) {
+            calibIdx = i;
+            break;
+        }
+    }
 
-    red   = (int16_t)((float)temp_red   / (float)(this->calibrationAvg) * 255.0);
-    green = (int16_t)((float)temp_green / (float)(this->calibrationAvg) * 255.0);
-    blue  = (int16_t)((float)temp_blue  / (float)(this->calibrationAvg) * 255.0);
+    temp_red   *= this->calibCoef[calibIdx][0];
+    temp_green *= this->calibCoef[calibIdx][1];
+    temp_blue  *= this->calibCoef[calibIdx][2];
+    temp_clear *= this->calibCoef[calibIdx][3];
+
+    red   = (float)temp_red   / (float)(this->calibValues[0].red) * 255.0;
+    green = (float)temp_green / (float)(this->calibValues[0].green) * 255.0;
+    blue  = (float)temp_blue  / (float)(this->calibValues[0].blue) * 255.0;
 
     if (red > 255) red = 255;
     if (green > 255) green = 255;
@@ -140,39 +150,73 @@ void Geegrow_TCS34725::setLimitsIRQ(int16_t high, int16_t low) {
 
 /******************************************************************************/
 /*!
-    @brief    Realize calibration of the sensor
+    @brief    Realize auto-calibration of the sensor
  */
 /******************************************************************************/
 void Geegrow_TCS34725::calibrate() {
-int32_t RGB_sums[] = {0, 0, 0};
-    int16_t red, green, blue, clear;
-    const uint8_t maxSamplesNum = 30;
-    /* Calc number of samples */
-    uint8_t samplesNum = 5000 / this->currentIntegrationTime;
-    if (samplesNum > maxSamplesNum)
-        samplesNum = maxSamplesNum;
-
-    /**********************    Take white value    ****************************/
-    Serial.println("Calibration starts. Bring a white standard to the sensor in 5 sec");
+    Serial.println("Calibration starts. Bring a white sample to the sensor in 5 sec");
     delay(5000);
     Serial.println("Calibrating..");
+    int16_t red, green, blue, clear;
+    /* Number of calibration samples */
+    uint16_t temp = CALIBRATION_TIME / this->currentIntegrationTime;
+    this->calibTableSize = (temp > MAX_CALIB_TABLE_SIZE) ? MAX_CALIB_TABLE_SIZE : temp;
+    /* Calibration table */
+    this->calibValues = new RGBC_value_t[this->calibTableSize];
+    /* Delay between calibration samples */
+    uint16_t delayDelta = CALIBRATION_TIME / this->calibTableSize - this->currentIntegrationTime;
 
-    for (uint8_t i = 0; i < samplesNum; i++) {
+    /* Record samples */
+    for (uint8_t i = 0; i < this->calibTableSize; i++) {
         this->getRawData(red, green, blue, clear);
-        RGB_sums[0] += red;
-        RGB_sums[1] += green;
-        RGB_sums[2] += blue;
+        this->calibValues[i].red = red;
+        this->calibValues[i].green = green;
+        this->calibValues[i].blue = blue;
+        this->calibValues[i].clear = clear;
+        delay(delayDelta);
     }
-
-    for (uint8_t i = 0; i < 3; i++) {
-        RGB_sums[i] = RGB_sums[i] / samplesNum;
+    /* Range recorded samples from MAX to MIN value of clear component */
+    Tools::bubble_sort(this->calibValues, this->calibTableSize);
+    /* Calculate scaling coefs */
+    /* Row 1 without any corrections */
+    for (uint8_t i = 0; i < 4; i++)
+        this->calibCoef[0][i] = 1.0;
+    /* Calculate other rows */
+    for (uint8_t i = 1; i < this->calibTableSize; i++) {
+        this->calibCoef[i][0] = (float)this->calibValues[0].red / (float)this->calibValues[i].red;
+        this->calibCoef[i][1] = (float)this->calibValues[0].green / (float)this->calibValues[i].green;
+        this->calibCoef[i][2] = (float)this->calibValues[0].blue / (float)this->calibValues[i].blue;
+        this->calibCoef[i][3] = (float)this->calibValues[0].clear / (float)this->calibValues[i].clear;
     }
+}
 
-    this->calibrationAvg = (RGB_sums[0] + RGB_sums[1] + RGB_sums[2]) / 3;
-    for (uint8_t i = 0; i < 3; i++)
-        this->calibrationDiff[i] = RGB_sums[i] - this->calibrationAvg;
-
-    Serial.println("Calibration finished. Sensor is ready.");
+/******************************************************************************/
+/*!
+    @brief    Upload user's calibration table instead of auto-calibration
+    @param    array   Pointer to array of user's RGBC values for calibration
+    @param    size    Number of samples in array
+ */
+/******************************************************************************/
+void Geegrow_TCS34725::calibrateManual(RGBC_value_t* array, uint8_t size) {
+    if (!array || size < 2)
+        return;
+    if (size > MAX_CALIB_TABLE_SIZE)
+        size = MAX_CALIB_TABLE_SIZE;
+    this->calibValues = array;
+    this->calibTableSize = size;
+    /* Range recorded samples from MAX to MIN value of clear component */
+    Tools::bubble_sort(this->calibValues, this->calibTableSize);
+    /* Calculate scaling coefs */
+    /* Row 1 without any corrections */
+    for (uint8_t i = 0; i < 4; i++)
+        this->calibCoef[0][i] = 1.0;
+    /* Calculate other rows */
+    for (uint8_t i = 1; i < this->calibTableSize; i++) {
+        this->calibCoef[i][0] = (float)this->calibValues[0].red / (float)this->calibValues[i].red;
+        this->calibCoef[i][1] = (float)this->calibValues[0].green / (float)this->calibValues[i].green;
+        this->calibCoef[i][2] = (float)this->calibValues[0].blue / (float)this->calibValues[i].blue;
+        this->calibCoef[i][3] = (float)this->calibValues[0].clear / (float)this->calibValues[i].clear;
+    }
 }
 
 /******************************************************************************/
@@ -258,4 +302,32 @@ uint16_t Geegrow_TCS34725::I2C_read_16(uint8_t reg) {
     x <<= 8;
     x |= t;
     return x;
+}
+
+/******************************************************************************/
+/*!
+    @brief    Sort array from MAX to MIN
+    @param    array   Pointer to array of RGBC values for sorting
+    @param    size    Number of samples in array
+ */
+/******************************************************************************/
+void Tools::bubble_sort(RGBC_value_t *array, uint8_t array_size) {
+    uint8_t i = 0;
+    RGBC_value_t buf;
+    bool swap_cnt = false;
+    if (array_size == 0)
+        return;
+    while (i < array_size) {
+        if (i + 1 != array_size && array[i].clear < array[i + 1].clear) {
+            buf = array[i];
+            array[i] = array[i + 1];
+            array[i + 1] = buf;
+            swap_cnt = true;
+        }
+        i++;
+        if (i == array_size && swap_cnt) {
+            swap_cnt = false;
+            i = 0;
+        }
+    }
 }
