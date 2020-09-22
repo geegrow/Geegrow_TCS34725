@@ -3,10 +3,10 @@
 #define     RN_ENABLE    0x00    /* Enables states and interrupts */
 #define     RN_ATIME     0x01    /* RGBC time */
 #define     RN_WTIME     0x03    /* Wait time */
-#define     RN_AILTL     0x04    /* Clear interrupt low threshold low byte */
-#define     RN_AILTH     0x05    /* Clear interrupt low threshold high byte */
-#define     RN_AIHTL     0x06    /* Clear interrupt high threshold low byte */
-#define     RN_AIHTH     0x07    /* Clear interrupt high threshold high byte */
+#define     RN_AILTL     0x04    /* RGBC interrupt low threshold low byte */
+#define     RN_AILTH     0x05    /* RGBC interrupt low threshold high byte */
+#define     RN_AIHTL     0x06    /* RGBC interrupt high threshold low byte */
+#define     RN_AIHTH     0x07    /* RGBC interrupt high threshold high byte */
 #define     RN_PERS      0x0C    /* Interrupt persistence filter */
 #define     RN_CONFIG    0x0D    /* Configuration */
 #define     RN_CONTROL   0x0F    /* Control */

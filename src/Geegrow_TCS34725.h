@@ -54,6 +54,7 @@ class Geegrow_TCS34725 {
         void getRGB_255(int16_t &red, int16_t &green, int16_t &blue);
         void enableIRQ();
         void disableIRQ();
+        void clearIRQ();
         void setLimitsIRQ(int16_t high, int16_t low);
         void calibrate();
         void calibrateManual(RGBC_value_t* array, uint8_t size);

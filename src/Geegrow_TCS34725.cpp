@@ -129,6 +129,16 @@ void Geegrow_TCS34725::enableIRQ() {
  */
 /******************************************************************************/
 void Geegrow_TCS34725::disableIRQ() {
+    uint8_t t = this->I2C_read_8(RN_ENABLE);
+    this->I2C_write_8(RN_ENABLE, t & ~RN_ENABLE_AIEN);
+}
+
+/******************************************************************************/
+/*!
+    @brief    Clears interrupt flag in device
+ */
+/******************************************************************************/
+void Geegrow_TCS34725::clearIRQ() {
     Wire.beginTransmission(this->i2c_addr);
     Wire.write(RN_COMMAND_CMD | RN_COMMAND_TYPE_SF | RN_COMMAND_ADDRSF_CLR_IRQ);
     Wire.endTransmission();
